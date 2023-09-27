@@ -16,36 +16,36 @@ from asyncua import ua
 logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
-USE_TRUST_STORE = True
+USE_TRUST_STORE = False
 
-cert_idx = 4
+cert_idx = 1
 cert_base = Path(__file__).parent
-cert = Path(cert_base / f"certificates/peer-certificate-example-{cert_idx}.der")
-private_key = Path(cert_base / f"certificates/peer-private-key-example-{cert_idx}.pem")
+cert = Path(cert_base / f"certificates/client-certificate.der")
+private_key = Path(cert_base / f"certificates/client-new-key.pem")
 
 async def task(loop):
     host_name = socket.gethostname()
-    client_app_uri = f"urn:{host_name}:foobar:myselfsignedclient"
+    client_app_uri = f"myselfsignedclient@{host_name}"
     url = "opc.tcp://127.0.0.1:4840/freeopcua/server/"
 
-    await setup_self_signed_certificate(private_key,
-                                        cert,
-                                        client_app_uri,
-                                        host_name,
-                                        [ExtendedKeyUsageOID.CLIENT_AUTH],
-                                        {
-                                            'countryName': 'CN',
-                                            'stateOrProvinceName': 'AState',
-                                            'localityName': 'Foo',
-                                            'organizationName': "Bar Ltd",
-                                        })
+    # await setup_self_signed_certificate(private_key,
+    #                                     cert,
+    #                                     client_app_uri,
+    #                                     host_name,
+    #                                     [ExtendedKeyUsageOID.CLIENT_AUTH],
+    #                                     {
+    #                                         'countryName': 'CN',
+    #                                         'stateOrProvinceName': 'AState',
+    #                                         'localityName': 'Foo',
+    #                                         'organizationName': "Bar Ltd",
+    #                                     })
     client = Client(url=url)
     client.application_uri = client_app_uri
     await client.set_security(
         SecurityPolicyBasic256Sha256,
         certificate=str(cert),
         private_key=str(private_key),
-        server_certificate="certificate-example.der"
+        server_certificate="certificates/server-certificate.der"
     )
 
     if USE_TRUST_STORE:
@@ -58,9 +58,9 @@ async def task(loop):
     try:
         async with client:
             objects = client.nodes.objects
-            child = await objects.get_child(['0:MyObject', '0:MyVariable'])
+            child = await objects.get_child(['0:IRMA', '0:Threat Level'])
             print(await child.get_value())
-            await child.set_value(42)
+            #await child.set_value(42)
             print(await child.get_value())
     except ua.UaError as exp:
         _logger.error(exp)
